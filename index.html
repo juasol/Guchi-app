@@ -5,22 +5,73 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>愚痴変換アプリ</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    min-height: 100vh;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
-    color: #fff;
-    padding: 24px 16px;
-  }
-  .container { max-width: 520px; margin: 0 auto; }
-  .header { text-align: center; margin-bottom: 32px; }
-  .header h1 {
-    font-size: 28px; font-weight: 900;
-    background: linear-gradient(90deg, #ff6b35, #f7c59f);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    letter-spacing: 0.05em;
-  }
-  .header p { color: #aaa; font-size: 13px; margin-top: 6px; }
-  .label { font-size: 12px; color: #aaa; margin-bottom: 10px; letter-spacing: 0.1em; }
-  .char-grid {​​​​​​​​​​​​​​​​
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  font-family: sans-serif;
+  color: #fff;
+  padding: 24px 16px;
+}
+.container { max-width: 520px; margin: 0 auto; }
+.header { text-align: center; margin-bottom: 32px; }
+.header h1 { font-size: 26px; font-weight: 900; color: #ff6b35; }
+.header p { color: #aaa; font-size: 13px; margin-top: 6px; }
+.label { font-size: 12px; color: #aaa; margin-bottom: 10px; }
+.char-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 24px; }
+.char-btn {
+  background: rgba(255,255,255,0.05); border: 2px solid transparent;
+  border-radius: 14px; padding: 12px 8px; cursor: pointer;
+  text-align: center; color: #fff;
+}
+.char-emoji { font-size: 22px; margin-bottom: 4px; }
+.char-name { font-size: 10px; font-weight: 700; color: #ccc; line-height: 1.3; }
+.char-desc { font-size: 10px; color: #777; margin-top: 2px; }
+textarea {
+  width: 100%; background: rgba(255,255,255,0.07);
+  border: 1.5px solid rgba(255,255,255,0.15); border-radius: 14px;
+  padding: 14px 16px; color: #fff; font-size: 15px;
+  resize: none; outline: none; line-height: 1.6; font-family: sans-serif;
+}
+textarea::placeholder { color: #555; }
+.submit-btn {
+  width: 100%; padding: 16px; border-radius: 14px; border: none;
+  font-size: 16px; font-weight: 800; cursor: pointer; margin-top: 16px;
+  background: #ff6b35; color: #fff;
+}
+.response-box {
+  margin-top: 24px; background: rgba(255,255,255,0.07);
+  border: 1.5px solid rgba(255,107,53,0.4);
+  border-radius: 18px; padding: 20px; display: none;
+}
+.response-box.show { display: block; }
+.response-name { font-size: 13px; font-weight: 700; color: #ff6b35; margin-bottom: 10px; }
+.response-text { font-size: 15px; line-height: 1.8; color: #eee; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div style="font-size:48px;margin-bottom:8px">😤</div>
+    <h1>愚痴変換アプリ</h1>
+    <p>キャラを選んで愚痴を吐き出そう</p>
+  </div>
+
+  <div class="label">① キャラクターを選ぶ</div>
+  <div class="char-grid" id="charGrid"></div>
+
+  <div class="label" style="margin-top:8px">② 愚痴を入力する</div>
+  <textarea id="guchiInput" rows="4" placeholder="今日も残業させられた…もう限界"></textarea>
+
+  <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">🔥 変換する</button>
+
+  <div class="response-box" id="responseBox">
+    <div class="response-name" id="responseName"></div>
+    <div class="response-text" id="responseText"></div>
+  </div>
+</div>
+
+<script>
+var CHARS = [
+  {id:"osaka", name:"関西のおばちゃん", emoji:"👩‍🦳", color:"#FF6B35",
+   template:"あなたは関西出身の60代のおばちゃんです。ど​​​​​​​​​​​​​​​​
