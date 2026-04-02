@@ -45,33 +45,4 @@ textarea::placeholder { color: #555; }
   border-radius: 18px; padding: 20px; display: none;
 }
 .response-box.show { display: block; }
-.response-name { font-size: 13px; font-weight: 700; color: #ff6b35; margin-bottom: 10px; }
-.response-text { font-size: 15px; line-height: 1.8; color: #eee; }
-</style>
-</head>
-<body>
-<div class="container">
-  <div class="header">
-    <div style="font-size:48px;margin-bottom:8px">😤</div>
-    <h1>愚痴変換アプリ</h1>
-    <p>キャラを選んで愚痴を吐き出そう</p>
-  </div>
-
-  <div class="label">① キャラクターを選ぶ</div>
-  <div class="char-grid" id="charGrid"></div>
-
-  <div class="label" style="margin-top:8px">② 愚痴を入力する</div>
-  <textarea id="guchiInput" rows="4" placeholder="今日も残業させられた…もう限界"></textarea>
-
-  <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">🔥 変換する</button>
-
-  <div class="response-box" id="responseBox">
-    <div class="response-name" id="responseName"></div>
-    <div class="response-text" id="responseText"></div>
-  </div>
-</div>
-
-<script>
-var CHARS = [
-  {id:"osaka", name:"関西のおばちゃん", emoji:"👩‍🦳", color:"#FF6B35",
-   template:"あなたは関西出身の60代のおばちゃんです。ど​​​​​​​​​​​​​​​​
+.response-name { font-size: 13​​​​​​​​​​​​​​​​
