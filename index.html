@@ -45,4 +45,100 @@ textarea::placeholder { color: #555; }
   border-radius: 18px; padding: 20px; display: none;
 }
 .response-box.show { display: block; }
-.response-name { font-size: 13​​​​​​​​​​​​​​​​
+.response-name { font-size: 13px; font-weight: 700; color: #ff6b35; margin-bottom: 10px; }
+.response-text { font-size: 15px; line-height: 1.8; color: #eee; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div style="font-size:48px;margin-bottom:8px">&#x1F624;</div>
+    <h1>愚痴変換アプリ</h1>
+    <p>キャラを選んで愚痴を吐き出そう</p>
+  </div>
+
+  <div class="label">① キャラクターを選ぶ</div>
+  <div class="char-grid" id="charGrid"></div>
+
+  <div class="label" style="margin-top:8px">② 愚痴を入力する</div>
+  <textarea id="guchiInput" rows="4" placeholder="今日も残業させられた…もう限界"></textarea>
+
+  <button class="submit-btn" onclick="handleSubmit()">🔥 変換する</button>
+
+  <div class="response-box" id="responseBox">
+    <div class="response-name" id="responseName"></div>
+    <div class="response-text" id="responseText"></div>
+  </div>
+</div>
+
+<script>
+var CHARS = [
+  {id:"osaka", name:"関西のおばちゃん", emoji:"👩‍🦳", color:"#FF6B35", desc:"笑い飛ばす",
+   template:"あなたは関西出身の60代のおばちゃんです。どんな愚痴も笑いに変えてしまう天才。関西弁バリバリで相手を元気にする。口癖はほんまにやまあええやん。"},
+  {id:"toxic", name:"毒舌ツッコミ", emoji:"😈", color:"#E63946", desc:"正直に斬る",
+   template:"あなたは毒舌ツッコミ師です。標準語でオブラートに包まず正直に斬り込みます。最後は必ず温かいフォローで締める。"},
+  {id:"philosopher", name:"哲学者・賢者", emoji:"🧙", color:"#6B4FBB", desc:"深く問い直す",
+   template:"あなたは哲学者です。愚痴の本質を深く掘り下げ、相手が気づきを得られるよう導きます。"},
+  {id:"logical", name:"論理的アドバイザー", emoji:"🧠", color:"#2196F3", desc:"整理して返す",
+   template:"あなたは論理的思考の専門家です。愚痴を分解して整理し、建設的な方向へ導きます。"},
+  {id:"gentle", name:"優しく受け止める人", emoji:"🤗", color:"#4CAF50", desc:"共感・包容",
+   template:"あなたは深い共感力を持つ温かい人物です。相手の気持ちに寄り添い、心が安らぐ返しをします。"},
+  {id:"hype", name:"スカッと代弁者", emoji:"🔥", color:"#FF9800", desc:"爽快に代弁",
+   template:"あなたは相手の気持ちを痛快に代弁する熱血キャラです。一緒に怒ってスカッとさせ、最後は温かいフォローで締めます。"}
+];
+
+var selectedId = null;
+
+var grid = document.getElementById("charGrid");
+CHARS.forEach(function(c) {
+  var btn = document.createElement("button");
+  btn.className = "char-btn";
+  btn.id = "btn-" + c.id;
+  btn.innerHTML = "<div class='char-emoji'>" + c.emoji + "</div><div class='char-name'>" + c.name + "</div><div class='char-desc'>" + c.desc + "</div>";
+  btn.onclick = function() { selectChar(c.id); };
+  grid.appendChild(btn);
+});
+
+function selectChar(id) {
+  selectedId = id;
+  CHARS.forEach(function(c) {
+    var b = document.getElementById("btn-" + c.id);
+    b.style.border = "2px solid transparent";
+    b.style.background = "rgba(255,255,255,0.05)";
+  });
+  var c = CHARS.find(function(x){ return x.id === id; });
+  var b = document.getElementById("btn-" + id);
+  b.style.border = "2px solid " + c.color;
+  b.style.background = "rgba(255,255,255,0.1)";
+  document.getElementById("responseBox").classList.remove("show");
+}
+
+async function handleSubmit() {
+  if (!selectedId) { alert("キャラを選んでください"); return; }
+  var guchi = document.getElementById("guchiInput").value.trim();
+  if (!guchi) { alert("愚痴を入力してください"); return; }
+
+  var c = CHARS.find(function(x){ return x.id === selectedId; });
+  var box = document.getElementById("responseBox");
+  box.classList.add("show");
+  document.getElementById("responseName").textContent = c.emoji + " " + c.name;
+  document.getElementById("responseText").textContent = "考え中...";
+
+  var prompt = "あなたは「" + c.name + "」として振る舞います。【キャラ設定】" + c.template + "【ルール】会話調で直接話しかけてください。50から100文字程度。最後は温かいフォローで締める。【愚痴】「" + guchi + "」返答してください。";
+
+  try {
+    var res = await fetch("/.netlify/functions/claude", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({prompt: prompt})
+    });
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById("responseText").textContent = data.text;
+  } catch(e) {
+    document.getElementById("responseText").textContent = "エラー: " + e.message;
+  }
+}
+</script>
+</body>
+</html>
