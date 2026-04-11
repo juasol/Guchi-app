@@ -127,7 +127,7 @@ async function handleSubmit() {
   var prompt = "あなたは「" + c.name + "」として振る舞います。【キャラ設定】" + c.template + "【ルール】会話調で直接話しかけてください。50から100文字程度。最後は温かいフォローで締める。【愚痴】「" + guchi + "」返答してください。";
 
   try {
-    var res = await fetch("/.netlify/functions/claude", {
+    var res = await fetch("/api/claude", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({prompt: prompt})
