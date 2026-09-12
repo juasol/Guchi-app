@@ -192,6 +192,11 @@ textarea::placeholder, input::placeholder { color: #555; }
     <button class="submit-btn" onclick="handlePanelSubmit()">🎙️ 会議にかける</button>
 
     <div id="panelChatLog"></div>
+    <div class="action-row" id="panelActions" style="display:none">
+      <button class="action-btn" onclick="copyPanelResult()">📋 コピー</button>
+      <button class="action-btn" onclick="sharePanelResult()">📤 シェア</button>
+      <button class="action-btn" onclick="savePanelResultAsImage()">🖼️ 画像保存</button>
+    </div>
   </div>
 
   <div id="historyView" style="display:none">
@@ -255,6 +260,7 @@ var customChars = loadCustomChars();
 var historyList = loadHistory();
 var selectedId = null;
 var lastResult = null;
+var lastPanelResult = null;
 
 function loadCustomChars() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.CUSTOM)) || []; } catch (e) { return []; }
@@ -650,6 +656,8 @@ async function handlePanelSubmit() {
 
   var log = document.getElementById('panelChatLog');
   log.innerHTML = "<div class='chat-turn' style='opacity:1'><span class='spinner'></span>会議中...（キャラの人数分、少し時間がかかります）</div>";
+  document.getElementById('panelActions').style.display = 'none';
+  lastPanelResult = null;
 
   var headers = {"Content-Type": "application/json"};
   var ownerKey = getOwnerKey();
@@ -672,7 +680,7 @@ async function handlePanelSubmit() {
     }
 
     log.innerHTML = '';
-    data.turns.forEach(function (t, i) {
+    var resultTurns = data.turns.map(function (t, i) {
       var charDef = chars.find(function (c) { return c.name === t.name; });
       var color = (charDef && charDef.color) || '#ff6b35';
       var el = document.createElement('div');
@@ -683,13 +691,98 @@ async function handlePanelSubmit() {
         "<div class='chat-name' style='color:" + color + "'>" + escapeHtml(t.emoji) + ' ' + escapeHtml(t.name) + '</div>' +
         "<div class='chat-text'>" + escapeHtml(t.text) + '</div>';
       log.appendChild(el);
+      return { name: t.name, emoji: t.emoji, text: t.text, color: color };
     });
+
+    lastPanelResult = { guchi: guchi, turns: resultTurns };
+    document.getElementById('panelActions').style.display = 'flex';
 
     try { localStorage.setItem(PANEL_LAST_USED_KEY, todayStr()); } catch (e) {}
     checkPanelUsedToday();
   } catch (e) {
     log.innerHTML = "<div class='chat-turn' style='opacity:1;border-left-color:#E63946'>エラー: " + escapeHtml(e.message) + '</div>';
   }
+}
+
+function buildPanelShareText() {
+  var lines = lastPanelResult.turns.map(function (t) { return t.emoji + ' ' + t.name + ': ' + t.text; });
+  return '🎙️ 愚痴会議\n\n' + lines.join('\n\n') + '\n\n#愚痴変換アプリ';
+}
+function copyPanelResult() {
+  if (!lastPanelResult) return;
+  var text = buildPanelShareText();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(function () { showToast('コピーしました'); })
+      .catch(function () { showToast('コピーに失敗しました'); });
+  } else {
+    showToast('コピーに失敗しました');
+  }
+}
+async function sharePanelResult() {
+  if (!lastPanelResult) return;
+  var text = buildPanelShareText();
+  if (navigator.share) {
+    try { await navigator.share({ text: text }); } catch (e) {}
+  } else {
+    copyPanelResult();
+  }
+}
+function savePanelResultAsImage() {
+  if (!lastPanelResult) return;
+  var W = 600;
+  var LINE_HEIGHT = 26;
+  var measureCanvas = document.createElement('canvas');
+  var mctx = measureCanvas.getContext('2d');
+  mctx.font = '18px sans-serif';
+
+  var blocks = lastPanelResult.turns.map(function (t) {
+    return { t: t, lines: wrapCanvasText(mctx, t.text, W - 80) };
+  });
+
+  var H = 90;
+  blocks.forEach(function (b) { H += LINE_HEIGHT + b.lines.length * LINE_HEIGHT + 20; });
+  H += 40;
+
+  var canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  var ctx = canvas.getContext('2d');
+
+  var grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, '#1a1a2e'); grad.addColorStop(0.5, '#16213e'); grad.addColorStop(1, '#0f3460');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#ff6b35';
+  ctx.font = 'bold 22px sans-serif';
+  ctx.fillText('🎙️ 愚痴会議', 40, 50);
+
+  var y = 96;
+  blocks.forEach(function (b) {
+    ctx.fillStyle = b.t.color;
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillText(b.t.emoji + ' ' + b.t.name, 40, y);
+    y += LINE_HEIGHT;
+    ctx.fillStyle = '#eee';
+    ctx.font = '18px sans-serif';
+    b.lines.forEach(function (l) { ctx.fillText(l, 40, y); y += LINE_HEIGHT; });
+    y += 20;
+  });
+
+  ctx.fillStyle = '#777';
+  ctx.font = '14px sans-serif';
+  ctx.fillText('愚痴変換アプリ', 40, H - 20);
+
+  canvas.toBlob(function (blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'guchi-panel-' + Date.now() + '.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    showToast('画像を保存しました');
+  });
 }
 
 renderGrid();
