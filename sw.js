@@ -1,4 +1,4 @@
-const CACHE_NAME = 'guchi-app-v1';
+const CACHE_NAME = 'guchi-app-v2';
 const urlsToCache = ['/'];
 
 self.addEventListener('install', function(event) {
