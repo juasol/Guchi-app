@@ -1,3 +1,44 @@
+const MAX_PROMPT_LENGTH = 4000;
+const RATE_LIMIT_MAX_REQUESTS = 8;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+// Best-effort in-memory limiter: Vercel reuses warm instances for most
+// consecutive requests, so this throttles real traffic, but each cold
+// start gets its own counter, so it isn't a hard guarantee under heavy
+// concurrent load from many instances at once.
+const rateLimitStore = new Map();
+
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return (req.socket && req.socket.remoteAddress) || 'unknown';
+}
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const record = rateLimitStore.get(ip) || { count: 0, windowStart: now };
+
+  if (now - record.windowStart > RATE_LIMIT_WINDOW_MS) {
+    record.count = 0;
+    record.windowStart = now;
+  }
+
+  if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return { allowed: false, retryAfterMs: RATE_LIMIT_WINDOW_MS - (now - record.windowStart) };
+  }
+
+  record.count += 1;
+  rateLimitStore.set(ip, record);
+  return { allowed: true };
+}
+
+function isOwnerRequest(req) {
+  const ownerKey = process.env.OWNER_BYPASS_KEY;
+  if (!ownerKey) return false;
+  const provided = req.headers['x-owner-key'];
+  return Boolean(provided) && provided === ownerKey;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -9,10 +50,21 @@ export default async function handler(req, res) {
     if (!prompt) {
       return res.status(400).json({ error: 'prompt is required' });
     }
+    if (prompt.length > MAX_PROMPT_LENGTH) {
+      return res.status(400).json({ error: 'prompt is too long' });
+    }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return res.status(500).json({ error: 'API key not configured' });
+    }
+
+    if (!isOwnerRequest(req)) {
+      const { allowed, retryAfterMs } = checkRateLimit(getClientIp(req));
+      if (!allowed) {
+        const minutes = Math.max(1, Math.ceil(retryAfterMs / 60000));
+        return res.status(429).json({ error: `利用制限に達しました。${minutes}分後にもう一度お試しください。` });
+      }
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {

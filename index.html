@@ -14,65 +14,198 @@ body {
   padding: 24px 16px;
 }
 .container { max-width: 520px; margin: 0 auto; }
-.header { text-align: center; margin-bottom: 32px; }
+.header { text-align: center; margin-bottom: 24px; }
 .header h1 { font-size: 26px; font-weight: 900; color: #ff6b35; }
 .header p { color: #aaa; font-size: 13px; margin-top: 6px; }
+
+.tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+.tab-btn {
+  flex: 1; padding: 11px; border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04); color: #999; font-weight: 700; font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+}
+.tab-btn.active { background: #ff6b35; color: #fff; border-color: #ff6b35; }
+
 .label { font-size: 12px; color: #aaa; margin-bottom: 10px; }
 .char-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 24px; }
 .char-btn {
+  position: relative;
   background: rgba(255,255,255,0.05); border: 2px solid transparent;
   border-radius: 14px; padding: 12px 8px; cursor: pointer;
-  text-align: center; color: #fff;
+  text-align: center; color: #fff; transition: transform 0.15s, background 0.2s;
 }
+.char-btn:active { transform: scale(0.96); }
+.char-btn.add-btn { border: 2px dashed rgba(255,255,255,0.2); background: transparent; color: #888; }
 .char-emoji { font-size: 22px; margin-bottom: 4px; }
 .char-name { font-size: 10px; font-weight: 700; color: #ccc; line-height: 1.3; }
 .char-desc { font-size: 10px; color: #777; margin-top: 2px; }
-textarea {
+.char-del {
+  position: absolute; top: 2px; right: 6px; font-size: 14px; color: #888;
+  line-height: 1; cursor: pointer; padding: 2px 4px;
+}
+.char-del:hover { color: #ff6b6b; }
+
+textarea, input[type=text], .modal input, .modal textarea {
   width: 100%; background: rgba(255,255,255,0.07);
   border: 1.5px solid rgba(255,255,255,0.15); border-radius: 14px;
   padding: 14px 16px; color: #fff; font-size: 15px;
   resize: none; outline: none; line-height: 1.6; font-family: sans-serif;
 }
-textarea::placeholder { color: #555; }
+textarea::placeholder, input::placeholder { color: #555; }
+
 .submit-btn {
   width: 100%; padding: 16px; border-radius: 14px; border: none;
   font-size: 16px; font-weight: 800; cursor: pointer; margin-top: 16px;
-  background: #ff6b35; color: #fff;
+  background: #ff6b35; color: #fff; transition: transform 0.15s;
 }
+.submit-btn:active { transform: scale(0.98); }
+
 .response-box {
   margin-top: 24px; background: rgba(255,255,255,0.07);
   border: 1.5px solid rgba(255,107,53,0.4);
   border-radius: 18px; padding: 20px; display: none;
 }
-.response-box.show { display: block; }
+.response-box.show { display: block; animation: popIn 0.25s ease; }
+@keyframes popIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .response-name { font-size: 13px; font-weight: 700; color: #ff6b35; margin-bottom: 10px; }
-.response-text { font-size: 15px; line-height: 1.8; color: #eee; }
+.response-text { font-size: 15px; line-height: 1.8; color: #eee; white-space: pre-wrap; }
+
+.spinner {
+  display: inline-block; width: 14px; height: 14px; margin-right: 6px;
+  border: 2px solid rgba(255,255,255,0.3); border-top-color: #ff6b35;
+  border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: -2px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.action-row { display: flex; gap: 8px; margin-top: 16px; }
+.action-btn {
+  flex: 1; padding: 10px 4px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05); color: #ddd; font-size: 12px; cursor: pointer; transition: background 0.2s;
+}
+.action-btn:active { background: rgba(255,255,255,0.15); }
+
+.history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.clear-history-btn {
+  background: none; border: none; color: #888; font-size: 12px; cursor: pointer; padding: 4px 6px;
+}
+.clear-history-btn:hover { color: #ff6b6b; }
+.history-item {
+  background: rgba(255,255,255,0.05); border-radius: 14px; padding: 14px;
+  margin-bottom: 12px; border-left: 4px solid #ff6b35;
+}
+.history-meta { display: flex; justify-content: space-between; font-size: 11px; color: #888; margin-bottom: 8px; }
+.history-guchi { font-size: 12px; color: #999; margin-bottom: 8px; }
+.history-response { font-size: 13px; color: #eee; line-height: 1.6; white-space: pre-wrap; }
+.history-actions { text-align: right; margin-top: 8px; }
+.history-del { background: none; border: none; color: #777; font-size: 11px; cursor: pointer; }
+.history-del:hover { color: #ff6b6b; }
+.empty-state { text-align: center; color: #666; padding: 60px 20px; font-size: 13px; line-height: 1.8; }
+
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+  align-items: center; justify-content: center; padding: 20px; z-index: 100;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #1b1b34; border: 1.5px solid rgba(255,255,255,0.15); border-radius: 18px;
+  padding: 24px; max-width: 420px; width: 100%; max-height: 85vh; overflow-y: auto;
+}
+.modal-title { font-size: 16px; font-weight: 800; margin-bottom: 18px; color: #ff6b35; }
+.form-row { margin-bottom: 14px; }
+.form-row label { display: block; font-size: 12px; color: #aaa; margin-bottom: 6px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+.modal-btn { flex: 1; padding: 12px; border-radius: 12px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; }
+.modal-btn.cancel { background: rgba(255,255,255,0.1); color: #ccc; }
+.modal-btn.save { background: #ff6b35; color: #fff; }
+
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: #222; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px;
+  opacity: 0; pointer-events: none; transition: all 0.25s; z-index: 200; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 380px) {
+  .char-grid { grid-template-columns: 1fr 1fr; }
+}
 </style>
 </head>
 <body>
 <div class="container">
   <div class="header">
-    <div style="font-size:48px;margin-bottom:8px">&#x1F624;</div>
+    <div style="font-size:48px;margin-bottom:8px" onclick="handleHeaderTap()">&#x1F624;</div>
     <h1>愚痴変換アプリ</h1>
     <p>キャラを選んで愚痴を吐き出そう</p>
   </div>
 
-  <div class="label">① キャラクターを選ぶ</div>
-  <div class="char-grid" id="charGrid"></div>
+  <div class="tabs">
+    <button class="tab-btn active" id="tabConvert" onclick="switchTab('convert')">💬 変換</button>
+    <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">🕐 履歴</button>
+  </div>
 
-  <div class="label" style="margin-top:8px">② 愚痴を入力する</div>
-  <textarea id="guchiInput" rows="4" placeholder="今日も残業させられた…もう限界"></textarea>
+  <div id="convertView">
+    <div class="label">① キャラクターを選ぶ</div>
+    <div class="char-grid" id="charGrid"></div>
 
-  <button class="submit-btn" onclick="handleSubmit()">🔥 変換する</button>
+    <div class="label" style="margin-top:8px">② 愚痴を入力する</div>
+    <textarea id="guchiInput" rows="4" maxlength="300" placeholder="今日も残業させられた…もう限界"></textarea>
 
-  <div class="response-box" id="responseBox">
-    <div class="response-name" id="responseName"></div>
-    <div class="response-text" id="responseText"></div>
+    <button class="submit-btn" onclick="handleSubmit()">🔥 変換する</button>
+
+    <div class="response-box" id="responseBox">
+      <div class="response-name" id="responseName"></div>
+      <div class="response-text" id="responseText"></div>
+      <div class="action-row" id="responseActions" style="display:none">
+        <button class="action-btn" onclick="copyResult()">📋 コピー</button>
+        <button class="action-btn" onclick="shareResult()">📤 シェア</button>
+        <button class="action-btn" onclick="saveResultAsImage()">🖼️ 画像保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="historyView" style="display:none">
+    <div class="history-header">
+      <div class="label" style="margin-bottom:0">履歴（新しい順）</div>
+      <button class="clear-history-btn" onclick="clearHistory()">🗑 全削除</button>
+    </div>
+    <div id="historyList"></div>
   </div>
 </div>
 
+<div class="modal-overlay" id="charModalOverlay">
+  <div class="modal">
+    <div class="modal-title">キャラクターを追加</div>
+    <div class="form-row">
+      <label>絵文字</label>
+      <input type="text" id="newCharEmoji" maxlength="4" placeholder="🙂">
+    </div>
+    <div class="form-row">
+      <label>名前</label>
+      <input type="text" id="newCharName" maxlength="20" placeholder="例: 熱血コーチ">
+    </div>
+    <div class="form-row">
+      <label>一言説明</label>
+      <input type="text" id="newCharDesc" maxlength="20" placeholder="例: 励ましてくれる">
+    </div>
+    <div class="form-row">
+      <label>性格・話し方の設定</label>
+      <textarea id="newCharTemplate" rows="3" placeholder="どんなキャラか、口調や性格を書いてください"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeCharModal()">キャンセル</button>
+      <button class="modal-btn save" onclick="saveNewChar()">追加する</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-var CHARS = [
+var STORAGE_KEYS = { CUSTOM: 'guchi_custom_chars', HISTORY: 'guchi_history', OWNER_KEY: 'guchi_owner_key' };
+var MAX_HISTORY = 50;
+var COLOR_PALETTE = ['#FF6B35','#E63946','#6B4FBB','#2196F3','#4CAF50','#FF9800','#00BCD4','#9C27B0','#F06292','#8BC34A'];
+
+var BUILTIN_CHARS = [
   {id:"osaka", name:"関西のおばちゃん", emoji:"👩‍🦳", color:"#FF6B35", desc:"笑い飛ばす",
    template:"あなたは関西出身の60代のおばちゃんです。どんな愚痴も笑いに変えてしまう天才。関西弁バリバリで相手を元気にする。口癖はほんまにやまあええやん。"},
   {id:"toxic", name:"毒舌ツッコミ", emoji:"😈", color:"#E63946", desc:"正直に斬る",
@@ -87,58 +220,336 @@ var CHARS = [
    template:"あなたは相手の気持ちを痛快に代弁する熱血キャラです。一緒に怒ってスカッとさせ、最後は温かいフォローで締めます。"}
 ];
 
+var customChars = loadCustomChars();
+var historyList = loadHistory();
 var selectedId = null;
+var lastResult = null;
 
-var grid = document.getElementById("charGrid");
-CHARS.forEach(function(c) {
-  var btn = document.createElement("button");
-  btn.className = "char-btn";
-  btn.id = "btn-" + c.id;
-  btn.innerHTML = "<div class='char-emoji'>" + c.emoji + "</div><div class='char-name'>" + c.name + "</div><div class='char-desc'>" + c.desc + "</div>";
-  btn.onclick = function() { selectChar(c.id); };
-  grid.appendChild(btn);
-});
+function loadCustomChars() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.CUSTOM)) || []; } catch (e) { return []; }
+}
+function saveCustomChars(list) {
+  try { localStorage.setItem(STORAGE_KEYS.CUSTOM, JSON.stringify(list)); } catch (e) {}
+}
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY)) || []; } catch (e) { return []; }
+}
+function saveHistory(list) {
+  try { localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(list)); } catch (e) {}
+}
+
+function getOwnerKey() {
+  try { return localStorage.getItem(STORAGE_KEYS.OWNER_KEY) || ''; } catch (e) { return ''; }
+}
+var headerTapCount = 0;
+var headerTapTimer = null;
+function handleHeaderTap() {
+  headerTapCount++;
+  clearTimeout(headerTapTimer);
+  headerTapTimer = setTimeout(function () { headerTapCount = 0; }, 1500);
+  if (headerTapCount >= 5) {
+    headerTapCount = 0;
+    var current = getOwnerKey();
+    var input = prompt('オーナーキー（空欄で解除）', current);
+    if (input === null) return;
+    try {
+      if (input.trim()) {
+        localStorage.setItem(STORAGE_KEYS.OWNER_KEY, input.trim());
+        showToast('オーナーモードを設定しました');
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.OWNER_KEY);
+        showToast('オーナーモードを解除しました');
+      }
+    } catch (e) {}
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (ch) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
+
+function allChars() { return BUILTIN_CHARS.concat(customChars); }
+
+function renderGrid() {
+  var grid = document.getElementById('charGrid');
+  grid.innerHTML = '';
+  allChars().forEach(function (c) {
+    var btn = document.createElement('button');
+    btn.className = 'char-btn';
+    btn.id = 'btn-' + c.id;
+    btn.innerHTML =
+      "<div class='char-emoji'>" + escapeHtml(c.emoji) + "</div>" +
+      "<div class='char-name'>" + escapeHtml(c.name) + "</div>" +
+      "<div class='char-desc'>" + escapeHtml(c.desc) + "</div>" +
+      (c.custom ? "<span class='char-del' title='削除'>×</span>" : '');
+    btn.onclick = function (e) {
+      if (e.target.classList.contains('char-del')) return;
+      selectChar(c.id);
+    };
+    if (c.custom) {
+      btn.querySelector('.char-del').onclick = function (e) {
+        e.stopPropagation();
+        removeCustomChar(c.id);
+      };
+    }
+    grid.appendChild(btn);
+  });
+
+  var addBtn = document.createElement('button');
+  addBtn.className = 'char-btn add-btn';
+  addBtn.innerHTML = "<div class='char-emoji'>➕</div><div class='char-name'>キャラを追加</div>";
+  addBtn.onclick = function () { openCharModal(); };
+  grid.appendChild(addBtn);
+}
 
 function selectChar(id) {
   selectedId = id;
-  CHARS.forEach(function(c) {
-    var b = document.getElementById("btn-" + c.id);
-    b.style.border = "2px solid transparent";
-    b.style.background = "rgba(255,255,255,0.05)";
+  allChars().forEach(function (c) {
+    var b = document.getElementById('btn-' + c.id);
+    if (!b) return;
+    b.style.border = '2px solid transparent';
+    b.style.background = 'rgba(255,255,255,0.05)';
   });
-  var c = CHARS.find(function(x){ return x.id === id; });
-  var b = document.getElementById("btn-" + id);
-  b.style.border = "2px solid " + c.color;
-  b.style.background = "rgba(255,255,255,0.1)";
-  document.getElementById("responseBox").classList.remove("show");
+  var c = allChars().find(function (x) { return x.id === id; });
+  var b = document.getElementById('btn-' + id);
+  b.style.border = '2px solid ' + c.color;
+  b.style.background = 'rgba(255,255,255,0.1)';
+  document.getElementById('responseBox').classList.remove('show');
+  document.getElementById('responseActions').style.display = 'none';
+}
+
+function openCharModal() {
+  document.getElementById('newCharEmoji').value = '';
+  document.getElementById('newCharName').value = '';
+  document.getElementById('newCharDesc').value = '';
+  document.getElementById('newCharTemplate').value = '';
+  document.getElementById('charModalOverlay').classList.add('show');
+}
+function closeCharModal() {
+  document.getElementById('charModalOverlay').classList.remove('show');
+}
+function saveNewChar() {
+  var emoji = document.getElementById('newCharEmoji').value.trim() || '🙂';
+  var name = document.getElementById('newCharName').value.trim();
+  var desc = document.getElementById('newCharDesc').value.trim();
+  var template = document.getElementById('newCharTemplate').value.trim();
+  if (!name || !template) { showToast('名前と性格設定を入力してください'); return; }
+  var color = COLOR_PALETTE[customChars.length % COLOR_PALETTE.length];
+  customChars.push({
+    id: 'custom-' + Date.now(), name: name, emoji: emoji,
+    desc: desc || 'オリジナル', template: template, color: color, custom: true
+  });
+  saveCustomChars(customChars);
+  renderGrid();
+  closeCharModal();
+  showToast('キャラを追加しました');
+}
+function removeCustomChar(id) {
+  if (!confirm('このキャラを削除しますか？')) return;
+  customChars = customChars.filter(function (c) { return c.id !== id; });
+  saveCustomChars(customChars);
+  if (selectedId === id) {
+    selectedId = null;
+    document.getElementById('responseBox').classList.remove('show');
+  }
+  renderGrid();
+  showToast('削除しました');
+}
+
+function switchTab(tab) {
+  document.getElementById('tabConvert').classList.toggle('active', tab === 'convert');
+  document.getElementById('tabHistory').classList.toggle('active', tab === 'history');
+  document.getElementById('convertView').style.display = tab === 'convert' ? 'block' : 'none';
+  document.getElementById('historyView').style.display = tab === 'history' ? 'block' : 'none';
+  if (tab === 'history') renderHistory();
+}
+
+function formatDate(ts) {
+  var d = new Date(ts);
+  function pad(n) { return String(n).padStart(2, '0'); }
+  return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+function renderHistory() {
+  var container = document.getElementById('historyList');
+  container.innerHTML = '';
+  if (historyList.length === 0) {
+    container.innerHTML = "<div class='empty-state'>まだ履歴がありません<br>愚痴を変換すると、ここに残ります</div>";
+    return;
+  }
+  historyList.slice().reverse().forEach(function (h) {
+    var item = document.createElement('div');
+    item.className = 'history-item';
+    item.style.borderLeftColor = h.color || '#ff6b35';
+    item.innerHTML =
+      "<div class='history-meta'><span>" + escapeHtml(h.emoji) + ' ' + escapeHtml(h.name) + "</span><span>" + formatDate(h.time) + "</span></div>" +
+      "<div class='history-guchi'>💭 " + escapeHtml(h.guchi) + "</div>" +
+      "<div class='history-response'>" + escapeHtml(h.response) + "</div>" +
+      "<div class='history-actions'><button class='history-del'>削除</button></div>";
+    item.querySelector('.history-del').onclick = function () { removeHistoryItem(h.id); };
+    container.appendChild(item);
+  });
+}
+function removeHistoryItem(id) {
+  historyList = historyList.filter(function (h) { return h.id !== id; });
+  saveHistory(historyList);
+  renderHistory();
+}
+function clearHistory() {
+  if (!historyList.length) return;
+  if (!confirm('履歴をすべて削除しますか？')) return;
+  historyList = [];
+  saveHistory(historyList);
+  renderHistory();
+  showToast('履歴を削除しました');
+}
+function addHistoryEntry(c, guchi, response) {
+  historyList.push({
+    id: 'h-' + Date.now(), charId: c.id, name: c.name, emoji: c.emoji,
+    color: c.color, guchi: guchi, response: response, time: Date.now()
+  });
+  if (historyList.length > MAX_HISTORY) historyList = historyList.slice(historyList.length - MAX_HISTORY);
+  saveHistory(historyList);
+}
+
+function hexToRgba(hex, alpha) {
+  var h = (hex || '#ff6b35').replace('#', '');
+  var r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+var toastTimer = null;
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2200);
 }
 
 async function handleSubmit() {
-  if (!selectedId) { alert("キャラを選んでください"); return; }
-  var guchi = document.getElementById("guchiInput").value.trim();
-  if (!guchi) { alert("愚痴を入力してください"); return; }
+  if (!selectedId) { showToast('キャラを選んでください'); return; }
+  var guchi = document.getElementById('guchiInput').value.trim();
+  if (!guchi) { showToast('愚痴を入力してください'); return; }
 
-  var c = CHARS.find(function(x){ return x.id === selectedId; });
-  var box = document.getElementById("responseBox");
-  box.classList.add("show");
-  document.getElementById("responseName").textContent = c.emoji + " " + c.name;
-  document.getElementById("responseText").textContent = "考え中...";
+  var c = allChars().find(function (x) { return x.id === selectedId; });
+  var box = document.getElementById('responseBox');
+  box.classList.add('show');
+  box.style.borderColor = hexToRgba(c.color, 0.4);
+  var nameEl = document.getElementById('responseName');
+  nameEl.textContent = c.emoji + ' ' + c.name;
+  nameEl.style.color = c.color;
+  document.getElementById('responseText').innerHTML = "<span class='spinner'></span>考え中...";
+  document.getElementById('responseActions').style.display = 'none';
 
   var prompt = "あなたは「" + c.name + "」として振る舞います。【キャラ設定】" + c.template + "【ルール】会話調で直接話しかけてください。50から100文字程度。最後は温かいフォローで締める。【愚痴】「" + guchi + "」返答してください。";
 
   try {
+    var headers = {"Content-Type": "application/json"};
+    var ownerKey = getOwnerKey();
+    if (ownerKey) headers["X-Owner-Key"] = ownerKey;
+
     var res = await fetch("/api/claude", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
+      headers: headers,
       body: JSON.stringify({prompt: prompt})
     });
     var data = await res.json();
-    if (data.error) throw new Error(data.error);
-    document.getElementById("responseText").textContent = data.text;
-  } catch(e) {
-    document.getElementById("responseText").textContent = "エラー: " + e.message;
+    if (data.error) {
+      document.getElementById('responseText').textContent = res.status === 429 ? data.error : "エラー: " + data.error;
+      return;
+    }
+    document.getElementById('responseText').textContent = data.text;
+    lastResult = { char: c, guchi: guchi, text: data.text };
+    document.getElementById('responseActions').style.display = 'flex';
+    addHistoryEntry(c, guchi, data.text);
+  } catch (e) {
+    document.getElementById('responseText').textContent = "エラー: " + e.message;
   }
 }
+
+function buildShareText() {
+  return lastResult.char.emoji + ' ' + lastResult.char.name + 'より:\n「' + lastResult.text + '」\n\n#愚痴変換アプリ';
+}
+function copyResult() {
+  if (!lastResult) return;
+  var text = buildShareText();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(function () { showToast('コピーしました'); })
+      .catch(function () { showToast('コピーに失敗しました'); });
+  } else {
+    showToast('コピーに失敗しました');
+  }
+}
+async function shareResult() {
+  if (!lastResult) return;
+  var text = buildShareText();
+  if (navigator.share) {
+    try { await navigator.share({ text: text }); } catch (e) {}
+  } else {
+    copyResult();
+  }
+}
+
+function wrapCanvasText(ctx, text, maxWidth) {
+  var chars = text.split('');
+  var lines = [];
+  var line = '';
+  for (var i = 0; i < chars.length; i++) {
+    if (chars[i] === '\n') { lines.push(line); line = ''; continue; }
+    var test = line + chars[i];
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = chars[i];
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+function saveResultAsImage() {
+  if (!lastResult) return;
+  var W = 600, H = 400;
+  var canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  var ctx = canvas.getContext('2d');
+
+  var grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, '#1a1a2e'); grad.addColorStop(0.5, '#16213e'); grad.addColorStop(1, '#0f3460');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = lastResult.char.color;
+  ctx.font = 'bold 22px sans-serif';
+  ctx.fillText(lastResult.char.emoji + ' ' + lastResult.char.name, 40, 56);
+
+  ctx.fillStyle = '#eee';
+  ctx.font = '20px sans-serif';
+  var lines = wrapCanvasText(ctx, lastResult.text, W - 80);
+  var y = 110;
+  lines.forEach(function (l) { ctx.fillText(l, 40, y); y += 32; });
+
+  ctx.fillStyle = '#777';
+  ctx.font = '14px sans-serif';
+  ctx.fillText('愚痴変換アプリ', 40, H - 30);
+
+  canvas.toBlob(function (blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'guchi-' + Date.now() + '.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    showToast('画像を保存しました');
+  });
+}
+
+renderGrid();
 </script>
 </body>
 </html>
