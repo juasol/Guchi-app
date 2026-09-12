@@ -6,6 +6,10 @@ const MAX_CHARACTERS = 3;
 
 const PANEL_RATE_LIMIT_MAX_REQUESTS = 1;
 const PANEL_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000; // 1 day
+// Owner mode skips the public limit but still gets a generous cap, so a
+// runaway loop or a leaked key can't rack up unbounded API cost.
+const OWNER_PANEL_RATE_LIMIT_MAX_REQUESTS = 20;
+const OWNER_PANEL_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000; // 1 day
 
 // Best-effort in-memory limiter, same caveat as api/claude.js: accurate per
 // warm Vercel instance, not a hard global guarantee under heavy concurrent
@@ -20,21 +24,21 @@ function getClientIp(req) {
   return (req.socket && req.socket.remoteAddress) || 'unknown';
 }
 
-function checkRateLimit(ip) {
+function checkRateLimit(key, maxRequests, windowMs) {
   const now = Date.now();
-  const record = rateLimitStore.get(ip) || { count: 0, windowStart: now };
+  const record = rateLimitStore.get(key) || { count: 0, windowStart: now };
 
-  if (now - record.windowStart > PANEL_RATE_LIMIT_WINDOW_MS) {
+  if (now - record.windowStart > windowMs) {
     record.count = 0;
     record.windowStart = now;
   }
 
-  if (record.count >= PANEL_RATE_LIMIT_MAX_REQUESTS) {
-    return { allowed: false, retryAfterMs: PANEL_RATE_LIMIT_WINDOW_MS - (now - record.windowStart) };
+  if (record.count >= maxRequests) {
+    return { allowed: false, retryAfterMs: windowMs - (now - record.windowStart) };
   }
 
   record.count += 1;
-  rateLimitStore.set(ip, record);
+  rateLimitStore.set(key, record);
   return { allowed: true };
 }
 
@@ -115,12 +119,14 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'API key not configured' });
     }
 
-    if (!isOwnerRequest(req)) {
-      const { allowed, retryAfterMs } = checkRateLimit(getClientIp(req));
-      if (!allowed) {
-        const hours = Math.max(1, Math.ceil(retryAfterMs / 3600000));
-        return res.status(429).json({ error: `会議モードは1日1回までです。あと約${hours}時間後にお試しください。` });
-      }
+    const owner = isOwnerRequest(req);
+    const rateLimitKey = (owner ? 'owner:' : 'public:') + getClientIp(req);
+    const maxRequests = owner ? OWNER_PANEL_RATE_LIMIT_MAX_REQUESTS : PANEL_RATE_LIMIT_MAX_REQUESTS;
+    const windowMs = owner ? OWNER_PANEL_RATE_LIMIT_WINDOW_MS : PANEL_RATE_LIMIT_WINDOW_MS;
+    const { allowed, retryAfterMs } = checkRateLimit(rateLimitKey, maxRequests, windowMs);
+    if (!allowed) {
+      const hours = Math.max(1, Math.ceil(retryAfterMs / 3600000));
+      return res.status(429).json({ error: `会議モードの利用上限に達しました。あと約${hours}時間後にお試しください。` });
     }
 
     const turns = [];
