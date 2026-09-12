@@ -128,6 +128,21 @@ textarea::placeholder, input::placeholder { color: #555; }
 @media (max-width: 380px) {
   .char-grid { grid-template-columns: 1fr 1fr; }
 }
+
+.char-btn.panel-selected { background: rgba(255,255,255,0.1); }
+.panel-order-badge {
+  position: absolute; top: -6px; left: -6px; width: 18px; height: 18px; border-radius: 50%;
+  background: #ff6b35; color: #fff; font-size: 10px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.panel-note { font-size: 11px; color: #999; margin-bottom: 10px; }
+.chat-turn {
+  background: rgba(255,255,255,0.05); border-left: 4px solid #ff6b35;
+  border-radius: 14px; padding: 14px; margin-top: 12px;
+  opacity: 0; animation: popIn 0.3s ease forwards;
+}
+.chat-name { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+.chat-text { font-size: 14px; line-height: 1.7; color: #eee; white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -140,6 +155,7 @@ textarea::placeholder, input::placeholder { color: #555; }
 
   <div class="tabs">
     <button class="tab-btn active" id="tabConvert" onclick="switchTab('convert')">💬 変換</button>
+    <button class="tab-btn" id="tabPanel" onclick="switchTab('panel')">🎙️ 会議</button>
     <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">🕐 履歴</button>
   </div>
 
@@ -161,6 +177,21 @@ textarea::placeholder, input::placeholder { color: #555; }
         <button class="action-btn" onclick="saveResultAsImage()">🖼️ 画像保存</button>
       </div>
     </div>
+  </div>
+
+  <div id="panelView" style="display:none">
+    <div class="label">🎙️ 複数キャラ会議モード<span style="color:#ff6b35">（1日1回まで）</span></div>
+    <div class="panel-note" id="panelUsedNote" style="display:none">この端末では本日すでに使用しています（実際の判定はサーバー側です）</div>
+
+    <div class="label" style="margin-top:8px">① キャラを2〜3人選ぶ</div>
+    <div class="char-grid" id="panelCharGrid"></div>
+
+    <div class="label" style="margin-top:8px">② 愚痴を入力する</div>
+    <textarea id="panelGuchiInput" rows="4" maxlength="300" placeholder="今日も残業させられた…もう限界"></textarea>
+
+    <button class="submit-btn" onclick="handlePanelSubmit()">🎙️ 会議にかける</button>
+
+    <div id="panelChatLog"></div>
   </div>
 
   <div id="historyView" style="display:none">
@@ -360,10 +391,13 @@ function removeCustomChar(id) {
 
 function switchTab(tab) {
   document.getElementById('tabConvert').classList.toggle('active', tab === 'convert');
+  document.getElementById('tabPanel').classList.toggle('active', tab === 'panel');
   document.getElementById('tabHistory').classList.toggle('active', tab === 'history');
   document.getElementById('convertView').style.display = tab === 'convert' ? 'block' : 'none';
+  document.getElementById('panelView').style.display = tab === 'panel' ? 'block' : 'none';
   document.getElementById('historyView').style.display = tab === 'history' ? 'block' : 'none';
   if (tab === 'history') renderHistory();
+  if (tab === 'panel') { renderPanelGrid(); checkPanelUsedToday(); }
 }
 
 function formatDate(ts) {
@@ -547,6 +581,115 @@ function saveResultAsImage() {
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
     showToast('画像を保存しました');
   });
+}
+
+var selectedPanelIds = [];
+var MIN_PANEL_CHARS = 2;
+var MAX_PANEL_CHARS = 3;
+var PANEL_LAST_USED_KEY = 'guchi_panel_last_used';
+
+function renderPanelGrid() {
+  var grid = document.getElementById('panelCharGrid');
+  grid.innerHTML = '';
+  allChars().forEach(function (c) {
+    var btn = document.createElement('button');
+    btn.className = 'char-btn';
+    var idx = selectedPanelIds.indexOf(c.id);
+    var badge = '';
+    if (idx !== -1) {
+      btn.classList.add('panel-selected');
+      btn.style.border = '2px solid ' + c.color;
+      badge = "<span class='panel-order-badge'>" + (idx + 1) + '</span>';
+    }
+    btn.innerHTML =
+      badge +
+      "<div class='char-emoji'>" + escapeHtml(c.emoji) + "</div>" +
+      "<div class='char-name'>" + escapeHtml(c.name) + "</div>";
+    btn.onclick = function () { togglePanelChar(c.id); };
+    grid.appendChild(btn);
+  });
+}
+
+function togglePanelChar(id) {
+  var idx = selectedPanelIds.indexOf(id);
+  if (idx !== -1) {
+    selectedPanelIds.splice(idx, 1);
+  } else {
+    if (selectedPanelIds.length >= MAX_PANEL_CHARS) {
+      showToast('選べるのは最大' + MAX_PANEL_CHARS + '人までです');
+      return;
+    }
+    selectedPanelIds.push(id);
+  }
+  renderPanelGrid();
+}
+
+function todayStr() {
+  return new Date().toDateString();
+}
+function checkPanelUsedToday() {
+  var note = document.getElementById('panelUsedNote');
+  try {
+    note.style.display = localStorage.getItem(PANEL_LAST_USED_KEY) === todayStr() ? 'block' : 'none';
+  } catch (e) {
+    note.style.display = 'none';
+  }
+}
+
+async function handlePanelSubmit() {
+  if (selectedPanelIds.length < MIN_PANEL_CHARS) {
+    showToast('キャラを' + MIN_PANEL_CHARS + '人以上選んでください');
+    return;
+  }
+  var guchi = document.getElementById('panelGuchiInput').value.trim();
+  if (!guchi) { showToast('愚痴を入力してください'); return; }
+
+  var chars = selectedPanelIds.map(function (id) {
+    return allChars().find(function (c) { return c.id === id; });
+  });
+
+  var log = document.getElementById('panelChatLog');
+  log.innerHTML = "<div class='chat-turn' style='opacity:1'><span class='spinner'></span>会議中...（キャラの人数分、少し時間がかかります）</div>";
+
+  var headers = {"Content-Type": "application/json"};
+  var ownerKey = getOwnerKey();
+  if (ownerKey) headers["X-Owner-Key"] = ownerKey;
+
+  try {
+    var res = await fetch('/api/panel', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        guchi: guchi,
+        characters: chars.map(function (c) { return { name: c.name, emoji: c.emoji, template: c.template }; })
+      })
+    });
+    var data = await res.json();
+    if (data.error) {
+      log.innerHTML = "<div class='chat-turn' style='opacity:1;border-left-color:#E63946'>" +
+        escapeHtml(res.status === 429 ? data.error : 'エラー: ' + data.error) + '</div>';
+      return;
+    }
+
+    log.innerHTML = '';
+    data.turns.forEach(function (t, i) {
+      var charDef = chars.find(function (c) { return c.name === t.name; });
+      var color = (charDef && charDef.color) || '#ff6b35';
+      var el = document.createElement('div');
+      el.className = 'chat-turn';
+      el.style.borderLeftColor = color;
+      el.style.animationDelay = (i * 0.15) + 's';
+      el.innerHTML =
+        "<div class='chat-name' style='color:" + color + "'>" + escapeHtml(t.emoji) + ' ' + escapeHtml(t.name) + '</div>' +
+        "<div class='chat-text'>" + escapeHtml(t.text) + '</div>';
+      log.appendChild(el);
+    });
+
+    try { localStorage.setItem(PANEL_LAST_USED_KEY, todayStr()); } catch (e) {}
+    checkPanelUsedToday();
+  } catch (e) {
+    log.innerHTML = "<div class='chat-turn' style='opacity:1;border-left-color:#E63946'>エラー: " + escapeHtml(e.message) + '</div>';
+  }
 }
 
 renderGrid();
