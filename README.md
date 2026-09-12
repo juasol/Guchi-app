@@ -1,0 +1,43 @@
+# 愚痴変換アプリ
+
+愚痴を入力してキャラクターを選ぶと、Claude APIがそのキャラの口調で返してくれるWebアプリ。
+
+## デプロイ先
+
+**本番はVercel**(`https://vercel.com/juasols-projects/guchi-app`)。
+
+Netlifyにも接続されているが、これは過去の名残で**使っていない**。`netlify.toml`や`netlify/functions/`は削除済みで、Vercelの`/api`フォルダ(zero-config)だけで動く構成になっている。
+
+## 必要な環境変数
+
+Vercelのプロジェクト設定 → Environment Variables で設定する。
+
+| 変数名 | 必須 | 説明 |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | ✅ 必須 | Claude APIの呼び出しに使う。[Anthropicコンソール](https://console.anthropic.com/settings/keys)で発行 |
+| `OWNER_BYPASS_KEY` | 任意 | 設定すると「オーナーモード」(後述)が使えるようになる。未設定なら何も起きない |
+
+環境変数を追加・変更したら、Deploymentsタブから最新デプロイを「Redeploy」しないと反映されない。
+
+## 主な機能
+
+- **愚痴変換**: キャラクターを選んで愚痴を入力すると、Claude APIがそのキャラの口調で返答
+- **履歴**: 変換結果をブラウザのlocalStorageに保存。「履歴」タブで閲覧・削除
+- **カスタムキャラ追加**: 自分だけのキャラ(絵文字・名前・性格設定)を追加・削除可能
+- **シェア**: 結果をコピー/Web Share API/画像として保存
+- **レート制限**: SNSでの公開利用を想定し、IPごとに1時間8回まで(`api/claude.js`内、サーバーのメモリ上でカウントするベストエフォート方式)
+- **オーナーモード(裏設定)**: ヘッダーの😤アイコンを5回連続タップすると鍵の入力欄が出る。`OWNER_BYPASS_KEY`と一致する文字列を入力すると、そのブラウザだけレート制限なしで使える(localStorageに保存)
+
+## 使用モデルについて
+
+`api/claude.js`内でモデルIDを直接指定している(`claude-sonnet-5`など)。Anthropicは古いモデルのスナップショットを提供終了にすることがあり、実際に`claude-sonnet-4-20250514`が使えなくなって変換が全滅した事故が過去にあった。**「愚痴を入力しても変換されない」系の不具合が起きたら、まずこのモデルIDが現行のものか疑う。**
+
+## ローカルでの動作確認
+
+`api/claude.js`はVercelのサーバーレス関数なので、`index.html`をブラウザで直接開くだけでは`/api/claude`は動かない(404になる)。フロントエンドの見た目だけ確認したい場合は、リポジトリ直下で:
+
+```
+python3 -m http.server 8765
+```
+
+などの簡易サーバーで`index.html`を開けばよいが、変換ボタンの動作確認にはVercelへのデプロイ(またはVercel CLIの`vercel dev`)が必要。
