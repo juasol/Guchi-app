@@ -133,7 +133,7 @@ textarea::placeholder, input::placeholder { color: #555; }
 <body>
 <div class="container">
   <div class="header">
-    <div style="font-size:48px;margin-bottom:8px">&#x1F624;</div>
+    <div style="font-size:48px;margin-bottom:8px" onclick="handleHeaderTap()">&#x1F624;</div>
     <h1>愚痴変換アプリ</h1>
     <p>キャラを選んで愚痴を吐き出そう</p>
   </div>
@@ -148,7 +148,7 @@ textarea::placeholder, input::placeholder { color: #555; }
     <div class="char-grid" id="charGrid"></div>
 
     <div class="label" style="margin-top:8px">② 愚痴を入力する</div>
-    <textarea id="guchiInput" rows="4" placeholder="今日も残業させられた…もう限界"></textarea>
+    <textarea id="guchiInput" rows="4" maxlength="300" placeholder="今日も残業させられた…もう限界"></textarea>
 
     <button class="submit-btn" onclick="handleSubmit()">🔥 変換する</button>
 
@@ -201,7 +201,7 @@ textarea::placeholder, input::placeholder { color: #555; }
 <div class="toast" id="toast"></div>
 
 <script>
-var STORAGE_KEYS = { CUSTOM: 'guchi_custom_chars', HISTORY: 'guchi_history' };
+var STORAGE_KEYS = { CUSTOM: 'guchi_custom_chars', HISTORY: 'guchi_history', OWNER_KEY: 'guchi_owner_key' };
 var MAX_HISTORY = 50;
 var COLOR_PALETTE = ['#FF6B35','#E63946','#6B4FBB','#2196F3','#4CAF50','#FF9800','#00BCD4','#9C27B0','#F06292','#8BC34A'];
 
@@ -236,6 +236,32 @@ function loadHistory() {
 }
 function saveHistory(list) {
   try { localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(list)); } catch (e) {}
+}
+
+function getOwnerKey() {
+  try { return localStorage.getItem(STORAGE_KEYS.OWNER_KEY) || ''; } catch (e) { return ''; }
+}
+var headerTapCount = 0;
+var headerTapTimer = null;
+function handleHeaderTap() {
+  headerTapCount++;
+  clearTimeout(headerTapTimer);
+  headerTapTimer = setTimeout(function () { headerTapCount = 0; }, 1500);
+  if (headerTapCount >= 5) {
+    headerTapCount = 0;
+    var current = getOwnerKey();
+    var input = prompt('オーナーキー（空欄で解除）', current);
+    if (input === null) return;
+    try {
+      if (input.trim()) {
+        localStorage.setItem(STORAGE_KEYS.OWNER_KEY, input.trim());
+        showToast('オーナーモードを設定しました');
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.OWNER_KEY);
+        showToast('オーナーモードを解除しました');
+      }
+    } catch (e) {}
+  }
 }
 
 function escapeHtml(s) {
@@ -421,13 +447,20 @@ async function handleSubmit() {
   var prompt = "あなたは「" + c.name + "」として振る舞います。【キャラ設定】" + c.template + "【ルール】会話調で直接話しかけてください。50から100文字程度。最後は温かいフォローで締める。【愚痴】「" + guchi + "」返答してください。";
 
   try {
+    var headers = {"Content-Type": "application/json"};
+    var ownerKey = getOwnerKey();
+    if (ownerKey) headers["X-Owner-Key"] = ownerKey;
+
     var res = await fetch("/api/claude", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
+      headers: headers,
       body: JSON.stringify({prompt: prompt})
     });
     var data = await res.json();
-    if (data.error) throw new Error(data.error);
+    if (data.error) {
+      document.getElementById('responseText').textContent = res.status === 429 ? data.error : "エラー: " + data.error;
+      return;
+    }
     document.getElementById('responseText').textContent = data.text;
     lastResult = { char: c, guchi: guchi, text: data.text };
     document.getElementById('responseActions').style.display = 'flex';
